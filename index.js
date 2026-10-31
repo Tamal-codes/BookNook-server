@@ -76,6 +76,24 @@ app.delete("/books/:id", async (req, res) => {
 });
 
 
+app.patch("/books/:id", async (req, res) => {
+    const { id } = req.params;
+
+    if (!ObjectId.isValid(id)) {
+        return res.status(400).send({ message: "Invalid book id" });
+    }
+
+    const { title, author, category, image, description, totalCopies } = req.body;
+
+    const result = await booksCollection.updateOne(
+        { _id: new ObjectId(id) },
+        { $set: { title, author, category, image, description, totalCopies } }
+    );
+
+    res.send(result);
+});
+
+
 
 app.listen(PORT, () => {
     console.log(`server is running on port ${PORT}`);
