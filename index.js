@@ -1,7 +1,10 @@
 import express from "express";
 import cors from "cors";
-import { MongoClient } from "mongodb";
+import { MongoClient, ObjectId } from "mongodb";
 import "dotenv/config";
+
+
+
 
 const PORT = 8000;
 const app = express();
@@ -35,13 +38,32 @@ app.get("/books", async (req, res) => {
 });
 
 
+
+
 app.post("/books", async (req, res) => {
-  const book = req.body;
-  book.createdAt = new Date();
-  const result = await booksCollection.insertOne(book);
-  res.send(result);
+    const book = req.body;
+    book.createdAt = new Date();
+    const result = await booksCollection.insertOne(book);
+    res.send(result);
+});
+
+app.get("/books/:id", async (req, res) => {
+    const { id } = req.params;
+
+    if (!ObjectId.isValid(id)) {
+        return res.status(400).send({ message: "Invalid book id" });
+    }
+
+    const book = await booksCollection.findOne({ _id: new ObjectId(id) });
+
+    if (!book) {
+        return res.status(404).send({ message: "Book not found" });
+    }
+
+    res.send(book);
 });
 
 app.listen(PORT, () => {
     console.log(`server is running on port ${PORT}`);
 });
+
