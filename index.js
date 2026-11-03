@@ -31,9 +31,9 @@ app.get("/", (req, res) => {
     res.send("hello world");
 });
 
-// ---------- BOOKS ----------
 
-// Public
+
+
 app.get("/books", async (req, res) => {
     try {
         const limit = Number(req.query.limit) || 0;
@@ -49,7 +49,7 @@ app.get("/books", async (req, res) => {
     }
 });
 
-// Public (the page itself is protected on the client)
+
 app.get("/books/:id", async (req, res) => {
     try {
         const { id } = req.params;
@@ -70,7 +70,7 @@ app.get("/books/:id", async (req, res) => {
     }
 });
 
-// Protected
+
 app.post("/books", verifyToken, async (req, res) => {
     try {
         const book = req.body;
@@ -146,7 +146,6 @@ app.patch("/books/:id", verifyToken, async (req, res) => {
     }
 });
 
-// ---------- BORROWS (all protected) ----------
 
 app.post("/borrows", verifyToken, async (req, res) => {
     try {
@@ -176,7 +175,7 @@ app.post("/borrows", verifyToken, async (req, res) => {
             return res.status(409).send({ message: "You already borrowed this book" });
         }
 
-        // Reduce copies only if at least one copy is left
+
         const decrement = await booksCollection.updateOne(
             { _id: new ObjectId(bookId), totalCopies: { $gt: 0 } },
             { $inc: { totalCopies: -1 } }
@@ -198,7 +197,7 @@ app.post("/borrows", verifyToken, async (req, res) => {
             });
             res.send(result);
         } catch (insertErr) {
-            // Give the copy back if saving the borrow failed
+    
             await booksCollection.updateOne(
                 { _id: new ObjectId(bookId) },
                 { $inc: { totalCopies: 1 } }
@@ -212,7 +211,7 @@ app.post("/borrows", verifyToken, async (req, res) => {
 
 app.get("/borrows", verifyToken, async (req, res) => {
     try {
-        // Only the logged-in user's own borrows
+    
         const borrows = await borrowsCollection
             .find({ userEmail: req.user.email })
             .sort({ borrowDate: -1 })
