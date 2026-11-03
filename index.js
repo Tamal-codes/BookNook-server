@@ -2,6 +2,9 @@ import express from "express";
 import cors from "cors";
 import { MongoClient, ObjectId } from "mongodb";
 import "dotenv/config";
+import { verifyToken } from "./verifyToken.js";
+
+
 
 const PORT = 8000;
 const app = express();
@@ -35,8 +38,9 @@ app.get("/", (req, res) => {
 app.get("/books", async (req, res) => {
     try {
         const limit = Number(req.query.limit) || 0;
+        const filter = req.query.email ? { userEmail: req.query.email } : {};
         const books = await booksCollection
-            .find()
+            .find(filter)
             .sort({ createdAt: -1 })
             .limit(limit)
             .toArray();
@@ -46,7 +50,7 @@ app.get("/books", async (req, res) => {
     }
 });
 
-app.post("/books", async (req, res) => {
+app.post("/books", verifyToken, async (req, res) => {
     try {
         const book = req.body;
         book.totalCopies = Number(book.totalCopies) || 1;
