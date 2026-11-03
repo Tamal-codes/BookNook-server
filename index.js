@@ -15,17 +15,16 @@ const db = client.db("booknookDB");
 const booksCollection = db.collection("books");
 const borrowsCollection = db.collection("borrows");
 
-export async function connectToMongoDB() {
+
+app.use(async (req, res, next) => {
     try {
         await client.connect();
-        console.log("You successfully connected to MongoDB!");
-        return client;
+        next();
     } catch (err) {
-        console.dir(err);
+        console.error(err);
+        res.status(500).send({ message: "Database connection failed" });
     }
-}
-
-connectToMongoDB();
+});
 
 app.get("/", (req, res) => {
     res.send("hello world");
@@ -33,7 +32,7 @@ app.get("/", (req, res) => {
 
 
 
-
+// Public
 app.get("/books", async (req, res) => {
     try {
         const limit = Number(req.query.limit) || 0;
@@ -147,6 +146,7 @@ app.patch("/books/:id", verifyToken, async (req, res) => {
 });
 
 
+
 app.post("/borrows", verifyToken, async (req, res) => {
     try {
         const { bookId, userName, returnDate } = req.body;
@@ -175,7 +175,6 @@ app.post("/borrows", verifyToken, async (req, res) => {
             return res.status(409).send({ message: "You already borrowed this book" });
         }
 
-
         const decrement = await booksCollection.updateOne(
             { _id: new ObjectId(bookId), totalCopies: { $gt: 0 } },
             { $inc: { totalCopies: -1 } }
@@ -197,7 +196,6 @@ app.post("/borrows", verifyToken, async (req, res) => {
             });
             res.send(result);
         } catch (insertErr) {
-    
             await booksCollection.updateOne(
                 { _id: new ObjectId(bookId) },
                 { $inc: { totalCopies: 1 } }
@@ -211,7 +209,6 @@ app.post("/borrows", verifyToken, async (req, res) => {
 
 app.get("/borrows", verifyToken, async (req, res) => {
     try {
-    
         const borrows = await borrowsCollection
             .find({ userEmail: req.user.email })
             .sort({ borrowDate: -1 })
@@ -255,7 +252,11 @@ app.delete("/borrows/:id", verifyToken, async (req, res) => {
     }
 });
 
-app.listen(PORT, () => {
-    console.log(`server is running on port ${PORT}`);
-});
+
+if (!process.env.VERCEL) {
+    app.listen(PORT, () => {
+        console.log(`server is running on port ${PORT}`);
+    });
+}
+
 export default app;
