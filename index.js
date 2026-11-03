@@ -4,7 +4,7 @@ import { MongoClient, ObjectId } from "mongodb";
 import "dotenv/config";
 import { verifyToken } from "./verifyToken.js";
 
-const PORT = 8000;
+const PORT = process.env.PORT || 8000;
 const app = express();
 
 app.use(cors());
@@ -258,3 +258,4 @@ app.delete("/borrows/:id", verifyToken, async (req, res) => {
 app.listen(PORT, () => {
     console.log(`server is running on port ${PORT}`);
 });
+export default app;

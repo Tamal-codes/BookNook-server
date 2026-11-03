@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { createRemoteJWKSet, jwtVerify } from "jose";
 
 const jwks = createRemoteJWKSet(
