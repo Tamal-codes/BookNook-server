@@ -1,10 +1,11 @@
 {
   "name": "book-nook-server",
   "version": "1.0.0",
-  "description": "",
+  "description": "Express and MongoDB API for the BookNook library app",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node index.js",
+    "dev": "nodemon index.js"
   },
   "keywords": [],
   "author": "",
@@ -15,7 +16,6 @@
     "dotenv": "^18.0.9",
     "express": "^5.3.0",
     "jose": "^6.2.15",
-    "jsonwebtoken": "^9.0.3",
     "mongodb": "^7.7.0"
   },
   "devDependencies": {

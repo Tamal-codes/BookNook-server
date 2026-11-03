@@ -4,8 +4,6 @@ import { MongoClient, ObjectId } from "mongodb";
 import "dotenv/config";
 import { verifyToken } from "./verifyToken.js";
 
-
-
 const PORT = 8000;
 const app = express();
 
@@ -35,6 +33,7 @@ app.get("/", (req, res) => {
 
 // ---------- BOOKS ----------
 
+// Public
 app.get("/books", async (req, res) => {
     try {
         const limit = Number(req.query.limit) || 0;
@@ -50,18 +49,7 @@ app.get("/books", async (req, res) => {
     }
 });
 
-app.post("/books", verifyToken, async (req, res) => {
-    try {
-        const book = req.body;
-        book.totalCopies = Number(book.totalCopies) || 1;
-        book.createdAt = new Date();
-        const result = await booksCollection.insertOne(book);
-        res.send(result);
-    } catch (err) {
-        res.status(500).send({ message: "Failed to add book" });
-    }
-});
-
+// Public (the page itself is protected on the client)
 app.get("/books/:id", async (req, res) => {
     try {
         const { id } = req.params;
@@ -82,12 +70,34 @@ app.get("/books/:id", async (req, res) => {
     }
 });
 
-app.delete("/books/:id", async (req, res) => {
+// Protected
+app.post("/books", verifyToken, async (req, res) => {
+    try {
+        const book = req.body;
+        book.totalCopies = Number(book.totalCopies) || 1;
+        book.createdAt = new Date();
+        const result = await booksCollection.insertOne(book);
+        res.send(result);
+    } catch (err) {
+        res.status(500).send({ message: "Failed to add book" });
+    }
+});
+
+app.delete("/books/:id", verifyToken, async (req, res) => {
     try {
         const { id } = req.params;
 
         if (!ObjectId.isValid(id)) {
             return res.status(400).send({ message: "Invalid book id" });
+        }
+
+        const book = await booksCollection.findOne({ _id: new ObjectId(id) });
+        if (!book) {
+            return res.status(404).send({ message: "Book not found" });
+        }
+
+        if (book.userEmail !== req.user.email) {
+            return res.status(403).send({ message: "You can only delete your own books" });
         }
 
         const result = await booksCollection.deleteOne({ _id: new ObjectId(id) });
@@ -97,12 +107,21 @@ app.delete("/books/:id", async (req, res) => {
     }
 });
 
-app.patch("/books/:id", async (req, res) => {
+app.patch("/books/:id", verifyToken, async (req, res) => {
     try {
         const { id } = req.params;
 
         if (!ObjectId.isValid(id)) {
             return res.status(400).send({ message: "Invalid book id" });
+        }
+
+        const book = await booksCollection.findOne({ _id: new ObjectId(id) });
+        if (!book) {
+            return res.status(404).send({ message: "Book not found" });
+        }
+
+        if (book.userEmail !== req.user.email) {
+            return res.status(403).send({ message: "You can only edit your own books" });
         }
 
         const { title, author, category, image, description, totalCopies } = req.body;
@@ -127,18 +146,15 @@ app.patch("/books/:id", async (req, res) => {
     }
 });
 
-// ---------- BORROWS ----------
+// ---------- BORROWS (all protected) ----------
 
-app.post("/borrows", async (req, res) => {
+app.post("/borrows", verifyToken, async (req, res) => {
     try {
-        const { bookId, userName, userEmail, returnDate } = req.body;
+        const { bookId, userName, returnDate } = req.body;
+        const userEmail = req.user.email;
 
         if (!bookId || !ObjectId.isValid(bookId)) {
             return res.status(400).send({ message: "Invalid book id" });
-        }
-
-        if (!userEmail) {
-            return res.status(400).send({ message: "User email is required" });
         }
 
         const parsedReturnDate = new Date(returnDate);
@@ -160,7 +176,7 @@ app.post("/borrows", async (req, res) => {
             return res.status(409).send({ message: "You already borrowed this book" });
         }
 
-        // Reduce copies only if at least one copy is left (safe even with two users at once)
+        // Reduce copies only if at least one copy is left
         const decrement = await booksCollection.updateOne(
             { _id: new ObjectId(bookId), totalCopies: { $gt: 0 } },
             { $inc: { totalCopies: -1 } }
@@ -194,16 +210,11 @@ app.post("/borrows", async (req, res) => {
     }
 });
 
-app.get("/borrows", async (req, res) => {
+app.get("/borrows", verifyToken, async (req, res) => {
     try {
-        const { email } = req.query;
-
-        if (!email) {
-            return res.status(400).send({ message: "Email is required" });
-        }
-
+        // Only the logged-in user's own borrows
         const borrows = await borrowsCollection
-            .find({ userEmail: email })
+            .find({ userEmail: req.user.email })
             .sort({ borrowDate: -1 })
             .toArray();
 
@@ -213,7 +224,7 @@ app.get("/borrows", async (req, res) => {
     }
 });
 
-app.delete("/borrows/:id", async (req, res) => {
+app.delete("/borrows/:id", verifyToken, async (req, res) => {
     try {
         const { id } = req.params;
 
@@ -224,6 +235,10 @@ app.delete("/borrows/:id", async (req, res) => {
         const borrow = await borrowsCollection.findOne({ _id: new ObjectId(id) });
         if (!borrow) {
             return res.status(404).send({ message: "Borrow record not found" });
+        }
+
+        if (borrow.userEmail !== req.user.email) {
+            return res.status(403).send({ message: "You can only return your own borrows" });
         }
 
         await borrowsCollection.deleteOne({ _id: new ObjectId(id) });

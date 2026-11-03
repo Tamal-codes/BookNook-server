@@ -1,8 +1,7 @@
 import { createRemoteJWKSet, jwtVerify } from "jose";
 
-
 const jwks = createRemoteJWKSet(
-  new URL("http://localhost:3000/api/auth/jwks")
+  new URL(`${process.env.CLIENT_URL}/api/auth/jwks`)
 );
 
 export async function verifyToken(req, res, next) {
