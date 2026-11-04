@@ -36,7 +36,9 @@ app.get("/", (req, res) => {
 app.get("/books", async (req, res) => {
     try {
         const limit = Number(req.query.limit) || 0;
-        const filter = req.query.email ? { userEmail: req.query.email } : {};
+        const filter = {};
+        if (req.query.email) filter.userEmail = req.query.email;
+        if (req.query.category) filter.category = req.query.category;
         const books = await booksCollection
             .find(filter)
             .sort({ createdAt: -1 })
@@ -259,4 +261,17 @@ if (!process.env.VERCEL) {
     });
 }
 
-export default app;
+export default app
+
+
+
+
+
+
+
+
+
+
+
+
+
